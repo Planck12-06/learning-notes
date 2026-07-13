@@ -77,9 +77,10 @@ index_img:
   /img/guga-doro.png
 # The banner image of archive page
 archive_img:
-
+  /img/atri-sunflower.png
 # Note: tag page, not tags page
-tag_img:
+tag_img: 
+  /img/atri-bower.png
 
 # The banner image of tag page, you can set the banner image for each tag
 # Format:
@@ -88,6 +89,7 @@ tag_per_img:
 
 # Note: category page, not categories page
 category_img:
+  /img/atri-daisyflower.png
 
 # The banner image of category page, you can set the banner image for each category
 # Format:
