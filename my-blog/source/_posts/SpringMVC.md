@@ -9,8 +9,8 @@ tags:
   - 表述层框架
   - RESTful
   - 参数校验
-cover: /img/xi.png
-top_img: /img/xi.png
+cover: /img/lika1.png
+top_img: /img/lika1.png
 ---
 
 # SpringMVC

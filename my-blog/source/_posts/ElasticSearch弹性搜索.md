@@ -1,7 +1,7 @@
 ---
 title: ElasticSearch弹性搜索
-cover: /img/xi.png
-top_img: /img/xi.png
+cover: /img/nagisang1.png
+top_img: /img/nagisang1.png
 date: 2026-09-07 17:14:06
 categories:
  - 中间件
