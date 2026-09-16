@@ -36,7 +36,7 @@ menu:
 code_blocks:
   # Code block theme: darker / pale night / light / ocean / false
   theme: light
-  macStyle: false
+  macStyle: true
   # Code block height limit (unit: px)
   height_limit: false
   word_wrap: false
@@ -102,7 +102,8 @@ footer_img: false
 # Website Background
 # Can set it to color, image URL or an array containing colors and/or image URLs
 # If an array is provided, a random background will be selected from the array on each load
-background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+background: #linear-gradient(135deg, #667eea 0%, #764ba2 100%)
+  # /img/xi.png
 
 cover:
   # Disable the cover or not
@@ -120,8 +121,8 @@ error_img:
 
 # A simple 404 page
 error_404:
-  enable: false
-  subtitle: 'Page Not Found'
+  enable: true
+  subtitle: '页面未找到'
   background: /img/error-page.png
 
 post_meta:
@@ -193,7 +194,7 @@ subtitle:
 # 5: Info displayed on the cover
 # 6: Masonry layout - Cover on top, info on the bottom
 # 7: Masonry layout - Info displayed on the cover
-index_layout: 3
+index_layout: 4
 
 # Display the article introduction on homepage
 # 1: description
@@ -448,7 +449,7 @@ copy:
 
 # Need to install the hexo-wordcount plugin
 wordcount:
-  enable: false
+  enable: true
   # Display the word count of the article in post meta
   post_wordcount: true
   # Display the time to read the article in post meta
@@ -458,9 +459,9 @@ wordcount:
 
 # Busuanzi count for PV / UV in site
 busuanzi:
-  site_uv: true
-  site_pv: true
-  page_pv: true
+  site_uv: false
+  site_pv: false
+  page_pv: false
 
 # --------------------------------------
 # Math
@@ -493,8 +494,8 @@ math:
 search:
   # Choose: algolia_search / local_search / docsearch
   # leave it empty if you don't need search
-  use:
-  placeholder:
+  use: local_search
+  placeholder: 搜索文章
 
   # Algolia Search
   algolia_search:
@@ -504,16 +505,16 @@ search:
   # Local Search
   local_search:
     # Preload the search data when the page loads.
-    preload: false
+    preload: true
     # Show top n results per article, show all results by setting to -1
-    top_n_per_article: 1
+    top_n_per_article: 3
     # Unescape html strings to the readable one.
-    unescape: false
+    unescape: true
     # Enable pagination for search results
     pagination:
-      enable: false
+      enable: true
       # Number of search results per page
-      hitsPerPage: 8
+      hitsPerPage: 10
     CDN:
 
   # Docsearch
@@ -777,21 +778,21 @@ site_verification:
 
 theme_color:
   enable: true
-  main: "#6366F1"
-  paginator: "#8B5CF6"
-  button_hover: "#A78BFA"
-  text_selection: "#6366F1"
-  link_color: "#6366F1"
-  meta_color: "#8B5CF6"
-  hr_color: "#C4B5FD"
-  code_foreground: "#A78BFA"
-  code_background: "rgba(99, 102, 241, .08)"
-  toc_color: "#8B5CF6"
-  blockquote_padding_color: "#6366F1"
-  blockquote_background_color: "rgba(99, 102, 241, .05)"
-  scrollbar_color: "#8B5CF6"
-  meta_theme_color_light: "ffffff"
-  meta_theme_color_dark: "#0f0f23"
+  main: "#2677a3"
+  paginator: "#2677a3"
+  button_hover: "#3a8cb5"
+  text_selection: "#d4e8f0"
+  link_color: "#2677a3"
+  meta_color: "#3a8cb5"
+  hr_color: "#e0e8ec"
+  code_foreground: "#2677a3"
+  code_background: "#f5f8f9"
+  toc_color: "#2677a3"
+  blockquote_padding_color: "#c8d8dc"
+  blockquote_background_color: "#f8fafb"
+  scrollbar_color: "#c8d8dc"
+  meta_theme_color_light: "#fafbfc"
+  meta_theme_color_dark: "#1a1d21"
 
 # The user interface setting of category and tag page
 # Choose: index - same as Homepage UI / default - same as archives UI
@@ -828,7 +829,7 @@ display_mode: light
 
 # Configuration for beautifying the content of the article
 beautify:
-  enable: false
+  enable: true
   # Specify the field to beautify (site or post)
   field: post
   # Specify the icon to be used as a prefix for the title, such as '\f0c1'
@@ -859,9 +860,9 @@ hr_icon:
 # Typewriter Effect
 # https://github.com/disjukr/activate-power-mode
 activate_power_mode:
-  enable: true
-  colorful: true
-  shake: true
+  enable: false
+  colorful: false
+  shake: false
   mobile: false
 
 # Background effects
@@ -870,7 +871,7 @@ activate_power_mode:
 # canvas_ribbon
 # See: https://github.com/hustcc/ribbon.js
 canvas_ribbon:
-  enable: true
+  enable: false
   # The size of ribbon
   size: 150
   # The opacity of ribbon (0 ~ 1)
@@ -900,7 +901,7 @@ canvas_nest:
 
 # Mouse click effects: fireworks
 fireworks:
-  enable: true
+  enable: false
   zIndex: 9999
   mobile: false
 
@@ -928,7 +929,7 @@ clickShowText:
 # https://github.com/francoischalifour/medium-zoom
 # https://fancyapps.com/fancybox/
 # Leave it empty if you don't need lightbox
-lightbox:
+lightbox: fancybox
 
 # --------------------------------------
 # Tag Plugins settings
@@ -1030,11 +1031,11 @@ instantpage: false
 # Lazyload
 # https://github.com/verlok/vanilla-lazyload
 lazyload:
-  enable: false
+  enable: true
   # Use browser's native lazyload instead of vanilla-lazyload
-  native: false
+  native: true
   # Specify the field to use lazyload (site or post)
-  field: site
+  field: post
   placeholder:
   blur: false
 
@@ -1108,7 +1109,7 @@ CDN:
     # artalk_css:
     # artalk_js:
     # blueimp_md5:
-    # busuanzi:
+    busuanzi: https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js
     # canvas_fluttering_ribbon:
     # canvas_nest:
     # canvas_ribbon:
