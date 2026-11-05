@@ -25,7 +25,7 @@ ES 要解决的只有一个核心问题：**当数据量达到百万、千万级
 | 中文分词 | 官方分词器对中文逐字切分 | IK 分词器 |
 | 数据建模 | ES 里的数据长什么样 | Mapping 映射属性 |
 | 写数据 | 索引库与文档怎么增删改查 | DSL CRUD + `_bulk` |
-| Java 写操作 | 代码里怎么操作 ES | `RestHighLevelClient` |
+| Java 写操作 | 代码里怎么操作 ES | Java 客户端（7.15 前 `RestHighLevelClient` / 8.x `ElasticsearchClient`） |
 | 查数据 | 怎么表达复杂搜索条件 | DSL 查询语法 |
 | Java 读操作 | 代码里怎么查询与解析 | `SearchRequest` + `QueryBuilders` |
 | 统计分析 | 分类、品牌等过滤项怎么来 | 数据聚合 |
@@ -368,9 +368,25 @@ POST /_bulk
 
 ---
 
-## 七、Java 客户端 RestHighLevelClient
+## 七、Java 客户端（两种方式对比）
 
-### (一) 依赖与版本覆盖
+ES 官方 Java 客户端经历过一次**大换血**，这也是 7.x 与 8.x 最核心的差异：
+
+| 对比项 | `RestHighLevelClient` | `ElasticsearchClient` |
+|---|---|---|
+| 适用版本 | ES 7.x（7.15 起标记为**废弃**） | **ES 8.x**（7.15+ 也已提供） |
+| 包路径 | `org.elasticsearch.client` | `co.elastic.clients.elasticsearch` |
+| 依赖坐标 | `elasticsearch-rest-high-level-client` | `elasticsearch-java` + `jakarta.json` |
+| 交互方式 | 手写 `XxxRequest` + `QueryBuilders` | **函数式 Builder + Lambda / 链式** |
+| 请求构建 | 拼装 DSL 用字符串或 Builder | 类型安全的**强类型 DSL**，编译期校验 |
+| 结果解析 | `response.getXxx()` 逐层剥 | 返回**可直接映射为对象**的类型 |
+| 是否推荐 | ❌ 已废弃（老项目仍在用） | ✅ **官方推荐** |
+
+> **一句话理解**：`RestHighLevelClient` 是**旧时代**的客户端，靠手拼 Request 和 `QueryBuilders`；`ElasticsearchClient` 是 8.x 的**新一代客户端**，用函数式 + 强类型 DSL，代码更简洁、更安全。**两者思路相通，学会一个另一个很好迁移。**
+
+### (一) 方式一：RestHighLevelClient（7.x 经典，保留）
+
+#### 依赖与版本覆盖
 
 ```xml
 <dependency>
@@ -387,7 +403,7 @@ POST /_bulk
 </properties>
 ```
 
-### (二) 初始化
+#### 初始化
 
 ```java
 RestHighLevelClient client = new RestHighLevelClient(
@@ -395,7 +411,7 @@ RestHighLevelClient client = new RestHighLevelClient(
 );
 ```
 
-### (三) 通用套路
+#### 通用套路
 
 所有 Java API 都遵循同一套流程，掌握它就不用死记：
 
@@ -408,7 +424,7 @@ RestHighLevelClient client = new RestHighLevelClient(
 
 **关键区别**：索引库操作要先 `client.indices()` 拿到索引操作对象；文档操作直接由 `client` 调用。
 
-### (四) 常用示例
+#### 常用示例
 
 创建索引库：
 
@@ -463,7 +479,7 @@ void testUpdateDocument() throws IOException {
 }
 ```
 
-### (五) 批量导入 —— 分页循环
+#### 批量导入 —— 分页循环
 
 `BulkRequest` 本身没有参数，本质是**把多个普通 CRUD 请求打包一起发**。数十万条数据不可能一次性导入，要分页循环，每批 1000 条左右：
 
@@ -495,6 +511,135 @@ void testLoadItemDocs() throws IOException {
 ```
 
 > 批量导入还有一条路是用 Logstash：无需编码，但要学它的配置语法，且对数据的再加工能力弱。Java API 方案更灵活，可以在写入前任意加工数据。
+
+### (二) 方式二：ElasticsearchClient（8.x 新客户端，推荐）
+
+> 8.x 的新客户端基于 `Elasticsearch Java API Client`，与**新的 REST API 规范**对齐。核心变化是**用函数式 Builder 替代了旧的 `XxxRequest` 类**，所有请求都由 `ElasticsearchClient` 统一发起。
+
+#### 依赖引入
+
+```xml
+<!-- ES 8.x 新客户端：核心 + JSON 处理 -->
+<dependency>
+    <groupId>co.elastic.clients</groupId>
+    <artifactId>elasticsearch-java</artifactId>
+    <version>8.11.0</version>
+</dependency>
+<!-- 8.x 客户端必需：Jakarta JSON 实现 -->
+<dependency>
+    <groupId>jakarta.json</groupId>
+    <artifactId>jakarta.json-api</artifactId>
+    <version>2.1.3</version>
+</dependency>
+```
+
+#### 初始化
+
+```java
+// 1. 创建底层 REST 传输层
+RestClient restClient = RestClient.builder(
+        new HttpHost("192.168.150.101", 9200)).build();
+
+// 2. 包装为 JSON 传输
+ElasticsearchTransport transport = new RestClientTransport(
+        restClient, new JacksonJsonpMapper());
+
+// 3. 拿到客户端
+ElasticsearchClient client = new ElasticsearchClient(transport);
+```
+
+#### 请求构建方式对比（重点差异）
+
+| 操作 | RestHighLevelClient（7.x） | ElasticsearchClient（8.x） |
+|---|---|---|
+| 创建索引 | `new CreateIndexRequest("items")` | `client.indices().create(c -> c.index("items"))` |
+| 新增文档 | `new IndexRequest("items").id(id)` | `client.index(i -> i.index("items").id(id).document(doc))` |
+| 查询文档 | `new GetRequest("items").id(id)` | `client.get(g -> g.index("items").id(id), Xxx.class)` |
+| 更新文档 | `new UpdateRequest(...).doc(...)` | `client.update(u -> u.index("items").id(id).doc(doc), Xxx.class)` |
+| 删除文档 | `new DeleteRequest("items").id(id)` | `client.delete(d -> d.index("items").id(id))` |
+| 批量操作 | `new BulkRequest().add(...)` | `client.bulk(b -> b.operations(...))` |
+| 搜索 | `new SearchRequest("items")` | `client.search(s -> s.index("items")..., Xxx.class)` |
+
+> **重大变化**：8.x 客户端**不需要手写 `Request` 对象**，全部通过 **Lambda 表达式**在方法内构建；而且**可以直接把 `_source` 映射为 Java 对象**，不用再自己解析 JSON。
+
+#### 常用示例
+
+**创建索引库**：
+
+```java
+client.indices().create(c -> c
+        .index("items")
+        .mappings(m -> m
+                .properties("name", p -> p.text(t -> t.analyzer("ik_max_word")))
+                .properties("price", p -> p.integer(i -> i))
+                .properties("brand", p -> p.keyword(k -> k))
+        )
+);
+```
+
+**新增文档**：
+
+```java
+ItemDoc itemDoc = BeanUtil.copyProperties(item, ItemDoc.class);
+client.index(i -> i
+        .index("items")
+        .id(itemDoc.getId())
+        .document(itemDoc)          // 直接传对象，自动序列化
+);
+```
+
+**查询文档（自动映射为对象）**：
+
+```java
+GetResponse<ItemDoc> response = client.get(g -> g
+        .index("items")
+        .id("100002644680"), ItemDoc.class);
+
+ItemDoc itemDoc = response.source();   // 直接拿到对象，无需手动解析
+```
+
+**搜索**：
+
+```java
+SearchResponse<ItemDoc> response = client.search(s -> s
+        .index("items")
+        .query(q -> q
+                .bool(b -> b
+                        .must(m -> m.match(t -> t.field("name").query("手机")))
+                        .filter(f -> f.term(t -> t.field("brand").value("华为")))
+                )
+        )
+        .from(0)
+        .size(10)
+        .sort(so -> so.field(f -> f.field("price").order(SortOrder.Desc))),
+        ItemDoc.class);
+
+// 遍历结果
+for (Hit<ItemDoc> hit : response.hits().hits()) {
+    ItemDoc doc = hit.source();        // 自动映射
+    Double score = hit.score();
+    System.out.println(doc + " score=" + score);
+}
+```
+
+**聚合**：
+
+```java
+SearchResponse<Void> response = client.search(s -> s
+        .index("items")
+        .size(0)
+        .aggregations("brand_agg", a -> a
+                .terms(t -> t.field("brand").size(5))),
+        Void.class);
+
+// 解析聚合结果（写法与 7.x 类似，仍取 buckets）
+var brandAgg = response.aggregations().get("brand_agg").sterms();
+for (var bucket : brandAgg.buckets().array()) {
+    System.out.println(bucket.key() + " : " + bucket.docCount());
+}
+```
+
+> **迁移提示**：两者思路完全一致 —— 都是"**构建请求 → 发送 → 解析响应**"，只是 8.x 把 `new XxxRequest()` 换成了 **Lambda Builder**，并支持结果**自动映射为对象**。
 
 ---
 
@@ -1013,7 +1158,7 @@ POST /search/filters
 | 中文分词 | IK 分词器（ik_smart / ik_max_word）、扩展词典 |
 | 数据建模 | Mapping（text / keyword / index / analyzer） |
 | 写数据 | 索引库 CRUD、文档 CRUD、`_bulk` 批处理 |
-| Java 写操作 | `RestHighLevelClient` + `XxxRequest` |
+| Java 写操作 | 7.x：`RestHighLevelClient` + `XxxRequest`；8.x：`ElasticsearchClient` + Lambda |
 | 查数据 | DSL：叶子查询、bool、function_score、排序、分页、高亮 |
 | Java 读操作 | `SearchRequest` + `QueryBuilders` + 逐层解析 |
 | 统计分析 | 桶聚合、度量聚合、子聚合、带条件聚合 |
@@ -1021,13 +1166,14 @@ POST /search/filters
 
 ### (二) Java API 统一套路
 
-无论是索引库还是文档，无论是写还是读，本质都是：
+**两种客户端思路完全一致**，都是四步走：
 
 ```
-创建 XxxRequest → 准备 DSL 参数 → client.xxx() 发送 → 解析响应
+7.x：创建 XxxRequest → 准备 DSL 参数 → client.xxx() 发送 → 解析响应
+8.x：Lambda 构建请求 → client.xxx() 发送 → 结果自动映射为对象
 ```
 
-记住这张映射表就够了：
+**7.x `RestHighLevelClient` 映射表**：
 
 | 想做的事 | Request | 发送方法 |
 |---|---|---|
@@ -1040,9 +1186,29 @@ POST /search/filters
 | 批量操作 | `BulkRequest` | `client.bulk()` |
 | 搜索 | `SearchRequest` | `client.search()` |
 
-### (三) 关键避坑清单
+**8.x `ElasticsearchClient` 映射表**（无独立 Request 类，全部 Lambda 构建）：
 
-1. **版本要对齐**：SpringBoot 默认 ES 版本是 7.17.10，必须在 `<properties>` 里覆盖成实际使用的版本，否则客户端与服务端版本不一致会各种报错。
+| 想做的事 | 发送方法 | 说明 |
+|---|---|---|
+| 创建索引库 | `client.indices().create(c -> ...)` | 内联 mapping |
+| 新增文档 | `client.index(i -> i.index(..).id(..).document(obj))` | 直接传对象 |
+| 查文档 | `client.get(g -> ..., Xxx.class)` | 结果自动映射 |
+| 局部改文档 | `client.update(u -> u...doc(obj), Xxx.class)` | 结果自动映射 |
+| 删文档 | `client.delete(d -> d.index(..).id(..))` | —— |
+| 批量操作 | `client.bulk(b -> b.operations(...))` | —— |
+| 搜索 | `client.search(s -> ..., Xxx.class)` | **结果直接映射为对象** |
+
+### (三) 版本选型建议
+
+| 你的情况 | 推荐 |
+|---|---|
+| 老项目、ES 7.x、已用 `RestHighLevelClient` | 保留现状，或按官方指引迁移 |
+| 新项目、ES 8.x | **直接用 `ElasticsearchClient`** |
+| 7.15 ~ 7.x 过渡期 | 可试用新版客户端（官方已提供） |
+
+### (四) 关键避坑清单
+
+1. **版本要对齐**：SpringBoot 默认 ES 版本是 7.17.10，必须在 `<properties>` 里覆盖成实际使用的版本，否则客户端与服务端版本不一致会各种报错。**客户端还得和服务端版本匹配**（7.x 用 `RestHighLevelClient`，8.x 用 `ElasticsearchClient`）。
 2. **mapping 建了就不能改**：只能加字段。改字段类型或分词器必须新建索引库再迁移数据。
 3. **text 与 keyword 别选错**：要分词搜索用 text，要精确匹配 / 排序 / 聚合用 keyword。选错了改起来代价极大。
 4. **`match_all` 默认只返回 10 条**：别误以为数据只有 10 条。
